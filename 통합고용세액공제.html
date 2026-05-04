@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>통합고용세액공제 자동계산기</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- 외부 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- 헤더 -->
+    <header class="header">
+      <div class="header-content">
+        <h1>통합고용세액공제 자동계산기</h1>
+        <div class="header-controls">
+          <label>적용 년도:</label>
+          <select id="yearSelect" onchange="switchYear(this.value)">
+            <option value="2020">2020년</option>
+            <option value="2021">2021년</option>
+            <option value="2022">2022년</option>
+            <option value="2023">2023년</option>
+            <option value="2024">2024년</option>
+            <option value="2025" selected>2025년</option>
+            <option value="2026">2026년</option>
+            <option value="2027">2027년</option>
+          </select>
+          <span id="progressBar" class="progress-bar">진행: <span id="progressText">1/4</span></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 탭 네비게이션 -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab(1)" data-tab="1">
+        <span class="tab-number">1</span>
+        <span class="tab-name">명세서 입력</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab(2)" data-tab="2">
+        <span class="tab-number">2</span>
+        <span class="tab-name">계산 결과</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab(3)" data-tab="3">
+        <span class="tab-number">3</span>
+        <span class="tab-name">추징/납부</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab(4)" data-tab="4">
+        <span class="tab-number">4</span>
+        <span class="tab-name">다운로드</span>
+      </button>
+    </nav>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="main-content">
+
+      <!-- TAB 1: 명세서 입력 -->
+      <section id="tab-1" class="tab-content active">
+        <div class="tab-header">
+          <h2>Step 1. 상시근로자 명세서</h2>
+          <p>회사 정보를 입력하고, 직전 3개년 상시근로자수를 입력한 뒤 당해연도 명세서를 업로드하거나 직접 입력해주세요.</p>
+        </div>
+
+        <!-- ① 회사 정보 -->
+        <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e0e0e0;">
+          <h3 style="margin-top: 0; color: #333;">📋 회사 정보</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">회사 유형</label>
+              <select id="companyType" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onchange="onCompanyInfoChange()">
+                <option value="small">중소기업</option>
+                <option value="medium">중견기업</option>
+                <option value="large">대기업</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-weight: bold;">수도권 여부</label>
+              <select id="regionSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onchange="onCompanyInfoChange()">
+                <option value="Y">수도권</option>
+                <option value="N">비수도권</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ② 직전 3개년 상시근로자수 -->
+        <div style="background: #fff8e1; padding: 20px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #ffc107;">
+          <h3 style="margin-top: 0; color: #856404;">📊 직전 3개년 상시근로자수</h3>
+          <p style="margin: 0 0 12px; font-size: 13px; color: #6d4c41;">2차·3차년도 공제 계산에 필요합니다. 파일을 업로드하면 자동으로 계산됩니다.</p>
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="background:#fff3cd;">
+                <th style="padding:8px 12px; border:1px solid #ffe082; text-align:center; width:80px;">연도</th>
+                <th style="padding:8px 12px; border:1px solid #ffe082; text-align:center;">청년 상시근로자수</th>
+                <th style="padding:8px 12px; border:1px solid #ffe082; text-align:center;">청년외 상시근로자수</th>
+                <th style="padding:8px 12px; border:1px solid #ffe082; text-align:center; width:220px;">명세서 파일 업로드 (자동계산)</th>
+              </tr>
+            </thead>
+            <tbody id="prevYearsBody"></tbody>
+          </table>
+          <div style="margin-top: 14px; display: flex; gap: 10px; justify-content: flex-end; align-items: center;">
+            <span id="prevYearSavedMsg" style="font-size: 12px; color: #2e7d32; display: none;">✅ 저장됨</span>
+            <button class="btn btn-primary" onclick="savePrevYearsAndCalculate()" style="padding: 8px 20px;">
+              💾 저장 및 재계산
+            </button>
+          </div>
+        </div>
+
+        <!-- ④ 당해연도 명세서 입력 -->
+        <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #a5d6a7;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="margin: 0; color: #2e7d32;">📄 당해연도 상시근로자 명세서</h3>
+            <button class="btn btn-danger" onclick="clearAllData()" style="font-size: 12px; padding: 6px 14px;">
+              🗑️ 전체 초기화
+            </button>
+          </div>
+          <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+            <button class="btn btn-primary active" id="uploadModeBtn" onclick="switchInputMode('upload')">
+              📁 파일 업로드
+            </button>
+            <button class="btn btn-primary" id="manualModeBtn" onclick="switchInputMode('manual')">
+              ✏️ 직접 입력
+            </button>
+          </div>
+
+          <div id="uploadMode" class="input-mode-content">
+            <div class="upload-box">
+              <input type="file" id="excelFile" accept=".xlsx,.xls" style="display:none;">
+              <div class="upload-actions">
+                <button class="btn btn-primary" onclick="document.getElementById('excelFile').click()">
+                  📁 Excel 파일 선택
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="downloadSampleTemplate()">
+                  📥 샘플 서식 다운로드
+                </button>
+              </div>
+              <p class="help-text">Excel (.xlsx) 파일 지원 | 샘플 서식을 다운받아 작성 후 업로드하세요</p>
+            </div>
+          </div>
+
+          <div id="manualMode" class="input-mode-content" style="display:none;">
+            <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button class="btn btn-success" onclick="addManualEmployeeRow()">➕ 직원 추가</button>
+              <button class="btn btn-danger" onclick="clearManualInput()">🗑️ 모두 삭제</button>
+              <span class="text-muted">주민번호 입력 시 생년월일·성별 자동 감지 | 남성은 군복무 월수 입력 가능</span>
+            </div>
+            <div id="manualInputTable"></div>
+            <div style="margin-top: 15px; text-align: center;">
+              <button class="btn btn-primary" onclick="submitManualInput()" style="padding:10px 28px;font-size:14px">
+                ✅ 데이터 저장 및 계산
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab1-summary"></div>
+        <div id="tab1-content"></div>
+      </section>
+
+      <!-- TAB 2: 계산 결과 -->
+      <section id="tab-2" class="tab-content">
+        <div class="tab-header">
+          <h2>Step 2. 계산 결과</h2>
+          <p>통합고용세액공제 계산 결과입니다.</p>
+        </div>
+
+        <div id="tab2-content" class="results-container">
+          <!-- 계산 결과가 여기에 로드됨 -->
+        </div>
+      </section>
+
+      <!-- TAB 3: 추징/납부 -->
+      <section id="tab-3" class="tab-content">
+        <div class="tab-header">
+          <h2>Step 3. 추징/납부 계산</h2>
+          <p>추징 및 납부 현황입니다.</p>
+        </div>
+
+        <div id="tab3-content" class="results-container">
+          <!-- 추징/납부 결과가 여기에 로드됨 -->
+        </div>
+      </section>
+
+      <!-- TAB 4: 다운로드 -->
+      <section id="tab-4" class="tab-content">
+        <div class="tab-header">
+          <h2>Step 4. 서식 작성 / 출력</h2>
+          <p>계산 결과를 PDF로 출력하거나 Excel로 내보내세요.</p>
+        </div>
+        <div id="tab4-content" class="results-container">
+          <!-- 다운로드 정보가 여기에 로드됨 -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="footer">
+      <p>© 2025 통합고용세액공제 자동계산기 | 세무법인다승</p>
+    </footer>
+  </div>
+
+  <!-- 자바스크립트 파일들 -->
+  <script src="js/utils/helpers.js?v=36"></script>
+  <script src="js/data/constants-2025.js?v=36"></script>
+  <script src="js/calculator/dateParser.js?v=36"></script>
+  <script src="js/calculator/workingDays.js?v=36"></script>
+  <script src="js/calculator/calculators.js?v=36"></script>
+  <script src="js/calculator/calc2024.js?v=36"></script>
+  <script src="js/calculator/calc2025.js?v=36"></script>
+  <script src="js/calculator/engine.js?v=36"></script>
+  <script src="js/utils/pdfParser.js?v=36"></script>
+  <script src="js/tabs/tab1.js?v=36"></script>
+  <script src="js/tabs/tab2.js?v=36"></script>
+  <script src="js/tabs/tab3.js?v=36"></script>
+  <script src="js/tabs/tab4.js?v=36"></script>
+  <script src="js/utils/exporter.js?v=36"></script>
+  <script src="js/app.js?v=36"></script>
+</body>
+</html>
