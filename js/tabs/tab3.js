@@ -133,6 +133,12 @@ function renderStream2ClawbackCard(stream, companyType, region, year, won, wonZ)
         <div style="font-weight:700;color:#e65100;margin-bottom:6px">⚠️ ② 청년 등 감소 — 청년외 단가 적용</div>
         <div style="font-size:13px">전체 유지되었으나 청년 등이 감소하여 2차 추가공제 전체를 청년외 단가로 계산합니다. 추징세액 없음.</div>
       </div>`;
+  } else if (!s.isMaintained) {
+    // 배제이나 공제받은 세액 없음 → 추징 해당 없음
+    resultHtml = `
+      <div style="margin-top:12px;background:#f5f5f5;border:1px solid #bdbdbd;border-radius:6px;padding:10px">
+        <div style="color:#555;font-weight:600">공제받은 세액 없음 — 추징 해당 없음</div>
+      </div>`;
   } else {
     resultHtml = `
       <div style="margin-top:12px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px">
