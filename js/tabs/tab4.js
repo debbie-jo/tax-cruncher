@@ -24,13 +24,17 @@ function renderTab4() {
   const { year, companyType, region, currentStats, stream1, stream2, stream3, prevYears } = result;
   const s1 = stream1 || {};
 
-  // A/B방식 판단: year >= 2025 → 전부 A방식; year < 2025 → 1차 B방식
-  const isAllA = year >= 2025;
-  const method1 = isAllA ? 'A방식 (기존 방식)' : 'B방식 (개정 후 방식)';
+  // A/B방식 판단: ruleYear1 >= 2025 → 신규정(B방식); ruleYear1 < 2025 → 구규정(A방식)
+  const isNewRules = (s1.ruleYear1 || year) >= 2025;
+  const method1 = isNewRules ? 'B방식 (개정 후 방식)' : 'A방식 (기존 방식)';
 
   // 연도별 상시근로자 데이터
   const py2 = (prevYears || []).find(p => p.year === year - 2) || {};
-  const py1 = (prevYears || []).find(p => p.year === year - 1) || {};
+  const py1Raw = (prevYears || []).find(p => p.year === year - 1) || {};
+  // ruleYear1 >= 2025: 직전년도를 engine이 신규칙으로 재계산한 값 사용
+  const py1 = isNewRules
+    ? { total: s1.prevTotal || 0, youth: s1.prevYouth || 0, nonYouth: s1.prevNonYouth || 0 }
+    : py1Raw;
 
   const n  = (v) => (v == null) ? '' : v;
   const nf = (v) => (v == null || v === 0) ? '0' : v;
