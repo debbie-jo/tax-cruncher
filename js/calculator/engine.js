@@ -1,19 +1,14 @@
 // ── 전체 공제 계산 엔진 (3개 스트림 동시 계산) ─────────────────────
 //
 // 경계 규정 (부칙):
-//   year1 ≤ 2025: 종전 규정 — pre-2025 단가 + pre-2026 상시근로자 규칙 + 사후관리 有
-//   year1 ≥ 2026: 신규정  — post-2025 단가 + 1년이상 조건 + 사후관리 폐지
+//   year1 ≤ 2024: 종전 규정 — pre-2025 단가 + 구 상시근로자 규칙(M/12) + 사후관리 有
+//   year1 ≥ 2025: 신규정  — post-2025 단가 + 1년이상 조건 + 사후관리 폐지
 //
-// 스트림 구성:
-//   stream1: year1=year  신규 1차 기본공제
-//   stream2: year1=year-1 (year1 < 2026만 존재 — 사후관리)
-//   stream3: year1=year-2 (year1 < 2026만 존재 — 사후관리, 중소 3차)
-//
-// ※ 스트림별로 year1에 맞는 규칙 적용: calcStats(employees, year, year1_of_stream)
+// ※ 2025년 prevYear 데이터가 있어도 ruleYear1은 2024 이하만 인정
 function findLegacyRuleYear1(prevYears, year) {
   const years = prevYears || [];
   for (let y = year - 2; y <= year - 1; y++) {
-    if (y >= 2026) continue;
+    if (y >= 2025) continue;
     const cur = years.find(p => p.year === y);
     if (cur && (cur.total || cur.youth || cur.nonYouth)) {
       return y;
