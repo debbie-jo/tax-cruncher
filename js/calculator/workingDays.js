@@ -99,6 +99,13 @@ function calcEmployeeContribution(emp, year, year1) {
     const M_eff = Math.max(0, L - K_eff + 1);
 
     contribution = roundDown2((M_eff / 12) * multiplier);
+
+    const isYouthEff = isYouthWorker(
+      emp.birthDateStr, emp.hireDateStr, year, year1,
+      emp.gender, emp.militaryMonths || 0,
+      emp.isDisabled, emp.isElderly, emp.isCareerBreak, emp.isNK
+    );
+    return { K: K_eff, L, M: M_eff, contribution, youthContribution: isYouthEff ? contribution : 0 };
   }
 
   // year1 기준으로 청년 여부 재계산 (emp.isYouth는 stream1 캐시 — 다른 year1엔 틀림)
