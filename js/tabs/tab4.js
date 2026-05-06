@@ -370,7 +370,7 @@ function _render1stCreditRows(companyType, region, s1, currentStats) {
 function _render2ndYearSection(s2, year, yCredit, nCredit, companyType, isAllA) {
   const won = (v) => v != null ? (v * 10000).toLocaleString() + '원' : '-';
   const method = 'A방식 (기존 방식)';
-  const totalInc = Math.max(0, round2((s2.currentTotal || 0) - (s2.year1Total || 0)));
+  const totalInc = round2((s2.currentTotal || 0) - (s2.year1Total || 0));
   const totalDec = !s2.isMaintained;
   const youthDec = s2.isYouthDecreased;
 
@@ -422,7 +422,7 @@ function _render2ndYearSection(s2, year, yCredit, nCredit, companyType, isAllA) 
 function _render3rdYearSection(s3, year, yCredit, nCredit, companyType, isAllA) {
   const won = (v) => v != null ? (v * 10000).toLocaleString() + '원' : '-';
   const method = 'A방식 (기존 방식)';
-  const totalInc = Math.max(0, round2((s3.currentTotal || 0) - (s3.year1Total || 0)));
+  const totalInc = round2((s3.currentTotal || 0) - (s3.year1Total || 0));
   const totalDec = !s3.isMaintained_y1;
   const youthDec = s3.isYouthDec_y1;
 

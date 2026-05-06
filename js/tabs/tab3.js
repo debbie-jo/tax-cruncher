@@ -264,23 +264,35 @@ function renderStream3ClawbackCard(stream, companyType, region, year, won, wonZ)
           <th>구분</th>
           <th style="text-align:center">${year1}년</th>
           <th style="text-align:center">중간 (${year2}년)</th>
+          <th style="text-align:center">증감①</th>
           <th style="text-align:center">당해 (${year}년)</th>
+          <th style="text-align:center">증감②</th>
           <th style="text-align:center">상태</th>
         </tr></thead>
         <tbody>
           <tr>
             <td>전체 상시근로자</td>
             <td style="text-align:center">${s.year1Total}</td>
-            <td style="text-align:center;color:${y2_ok ? '#2e7d32' : '#c62828'}">${s.year2Total} ${y2_ok ? '✓' : '✗'}</td>
-            <td style="text-align:center;color:${cur_ok ? '#2e7d32' : '#c62828'}">${s.currentTotal} ${cur_ok ? '✓' : '✗'}</td>
+            <td style="text-align:center;color:${y2_ok ? '#2e7d32' : '#c62828'}">${s.year2Total}</td>
+            <td style="text-align:center;color:${y2_ok ? '#2e7d32' : '#c62828'};font-weight:600">
+              ${round2(s.year2Total - s.year1Total) >= 0 ? '+' : ''}${round2(s.year2Total - s.year1Total)}
+            </td>
+            <td style="text-align:center;color:${cur_ok ? '#2e7d32' : '#c62828'}">${s.currentTotal}</td>
+            <td style="text-align:center;color:${cur_ok ? '#2e7d32' : '#c62828'};font-weight:600">
+              ${diffCurY1 >= 0 ? '+' : ''}${diffCurY1}
+            </td>
             <td style="text-align:center">${s.isMaintained_y1 ? badgeOk : badgeNg}</td>
           </tr>
           <tr>
             <td>청년 등</td>
             <td style="text-align:center">${s.year1Youth}</td>
             <td style="text-align:center;color:${(s.year2Youth||0) < s.year1Youth ? '#e65100' : '#2e7d32'}">${s.year2Youth ?? '-'}</td>
-            <td style="text-align:center;color:${diffCurY1Youth < 0 ? '#e65100' : '#2e7d32'}">
-              ${s.currentYouth} (${diffCurY1Youth >= 0 ? '+' : ''}${diffCurY1Youth})
+            <td style="text-align:center;color:${(s.year2Youth||0) < s.year1Youth ? '#e65100' : '#2e7d32'};font-weight:600">
+              ${round2((s.year2Youth||0) - s.year1Youth) >= 0 ? '+' : ''}${round2((s.year2Youth||0) - s.year1Youth)}
+            </td>
+            <td style="text-align:center;color:${diffCurY1Youth < 0 ? '#e65100' : '#2e7d32'}">${s.currentYouth}</td>
+            <td style="text-align:center;color:${diffCurY1Youth < 0 ? '#e65100' : '#2e7d32'};font-weight:600">
+              ${diffCurY1Youth >= 0 ? '+' : ''}${diffCurY1Youth}
             </td>
             <td style="text-align:center">
               ${s.isMaintained_y1 ? (s.isYouthDec_y1 ? badge2 : badgeOk) : '<span style="color:#aaa">-</span>'}
