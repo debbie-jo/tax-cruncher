@@ -28,9 +28,19 @@ function initFileUpload() {
 }
 
 // ── 엑셀 파싱 ────────────────────────────────────────────────────────
+// 국세청 통합고용세액공제 명세서 여부 감지
+// col6 = "⑯내국인" → 계산기 서식과 달리 col6에 내국인 컬럼 추가됨
+function detectExcelFormat(rows) {
+  if (!rows || !rows[0]) return 'default';
+  const h = rows[0];
+  if (String(h[6] || '').includes('내국인')) return 'nts';
+  return 'default';
+}
+
 function parseAndRenderExcelData(rows) {
   const year   = AppState.year;
   const region = AppState.region;
+  const format = detectExcelFormat(rows);
 
   const employees = [];
   // 행 0 = 헤더, 마지막 행이 합계면 스킵
@@ -40,7 +50,7 @@ function parseAndRenderExcelData(rows) {
     const nameVal = String(row[1] || '').trim();
     if (!nameVal || nameVal === '합 계' || nameVal === '합계') continue;
 
-    const emp = parseExcelRow(row, year, region);
+    const emp = parseExcelRow(row, year, region, format);
     if (emp) employees.push(emp);
   }
 
@@ -49,7 +59,8 @@ function parseAndRenderExcelData(rows) {
   AppState.calcResult = runEngine(AppState);
   updateCurrentYearSummaryRow();
   renderPrevYearsTable();  // 당해년도 행 갱신
-  showToast(`${employees.length}명 로드 완료.`);
+  const fmtLabel = format === 'nts' ? ' (국세청 서식)' : '';
+  showToast(`${employees.length}명 로드 완료.${fmtLabel}`);
 }
 
 // 엑셀 행 → 직원 객체
@@ -66,24 +77,26 @@ function normalizeExcludeReason(raw) {
   return s;
 }
 
-function parseExcelRow(row, year, region) {
-  const year1 = year; // B안: year1=year (신규 1차 스트림 기준)
+// format: 'nts' = 국세청 통합고용세액공제 명세서 (col6=내국인 추가 → 이후 +1 오프셋)
+//         'default' = 계산기 자체 서식
+function parseExcelRow(row, year, region, format) {
+  const nts = format === 'nts';
+  const year1 = year;
   const name          = String(row[1] || '').trim();
   const birthDateStr  = toDateStr(row[2]);
-  const dCol          = String(row[3] || '').toUpperCase().trim(); // D: 상시근로자 여부
+  const dCol          = String(row[3] || '').toUpperCase().trim();
   const excludeReason = normalizeExcludeReason(row[4]);
-  // F열: 단시간 유형 — "해당없음" 계열은 빈값으로
   const partTypeRaw   = String(row[5] || '').trim();
   const partTimeType  = (partTypeRaw === '0.5' || partTypeRaw === '0.75') ? partTypeRaw : '';
-  const rrn           = '';  // 주민번호 칼럼 제거됨 (G열=수도권으로 변경)
-  const hireDateStr   = toDateStr(row[7]);
-  const resignDateStr = toDateStr(row[8]);
-  const isDisabled    = String(row[18] || '').toUpperCase() === 'Y';
-  const elderlyRaw    = String(row[19] || '').toUpperCase().trim();
-  const isCareerBreak = String(row[20] || '').toUpperCase() === 'Y';
-  const isNK          = String(row[21] || '').toUpperCase() === 'Y';
-  const isRegularConvert = String(row[22] || '').toUpperCase() === 'Y';
-  const isParentalLeave  = String(row[23] || '').toUpperCase() === 'Y';
+  const rrn           = '';
+  const hireDateStr   = toDateStr(row[nts ? 8 : 7]);
+  const resignDateStr = toDateStr(row[nts ? 9 : 8]);
+  const isDisabled    = String(row[nts ? 19 : 18] || '').toUpperCase() === 'Y';
+  const elderlyRaw    = String(row[nts ? 20 : 19] || '').toUpperCase().trim();
+  const isCareerBreak = String(row[nts ? 21 : 20] || '').toUpperCase() === 'Y';
+  const isNK          = String(row[nts ? 22 : 21] || '').toUpperCase() === 'Y';
+  const isRegularConvert = String(row[nts ? 23 : 22] || '').toUpperCase() === 'Y';
+  const isParentalLeave  = String(row[nts ? 24 : 23] || '').toUpperCase() === 'Y';
 
   // D열 우선: Y=포함, N=제외. 없으면 E열 사유로 판단
   let isExcluded;
