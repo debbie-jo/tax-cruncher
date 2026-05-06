@@ -191,9 +191,9 @@ function calcCarryCredit_3rd(prevYears, currentStats, companyType, region, year1
   // 추징세액 계산 (2년이내: base × 공제횟수2 - 1년이내 기납부 추징) - year1TotalCredit을 상한으로 전달
   const baseCbd  = calcClawbackAmount(year1Total, year1Youth, currentStats.total, currentStats.youth, unitCredit, year1TotalCredit);
   const priorCbd = calcClawbackAmount(year1Total, year1Youth, year2Total, year2Youth, unitCredit, year1TotalCredit);
-  // prior추징 = 전년도(year2 시점) 1년이내 검사에서 실제 납부한 추징 (y2_ok=true면 A/B=0, C만 가능)
-  const priorClawback = y2_ok ? priorCbd.clawback : 0;
-  const clawback3 = y2_ok && baseCbd.clawback > 0
+  // y2_ok=false여도 year2에서 실제 추징이 발생했으므로 priorCbd 그대로 사용
+  const priorClawback = priorCbd.clawback;
+  const clawback3 = baseCbd.clawback > 0
     ? Math.max(0, round2(baseCbd.clawback * 2 - priorClawback))
     : 0;
 

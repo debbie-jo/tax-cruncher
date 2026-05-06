@@ -217,12 +217,12 @@ function renderStream3ClawbackCard(stream, companyType, region, year, won, wonZ)
 
   // 결과 박스 결정
   let resultHtml;
-  if (!y2_ok) {
-    // 중간년도(year2) 이미 감소 → stream2에서 추징됨 → 당해 추가 추징 없음
+  if (!y2_ok && s.clawback === 0) {
+    // year2 감소로 전년도 추징 발생, year3도 감소했으나 기납부 추징이 더 크거나 같음 → 추가 납부 없음
     resultHtml = `
       <div style="margin-top:12px;background:#ffebee;border:1px solid #ef9a9a;border-radius:6px;padding:12px">
-        <div style="font-weight:700;color:#c62828;margin-bottom:6px">⚠️ 배제 — 전년도(${year2}년)에 추징됨</div>
-        <div style="font-size:13px;color:#555">중간년도(${year2}년) 근로자수 부족으로 전년도에 이미 추징 발생. 당해 추가 추징 없음.</div>
+        <div style="font-weight:700;color:#c62828;margin-bottom:6px">⚠️ 배제 — 전년도(${year2}년)에 추징 발생</div>
+        <div style="font-size:13px;color:#555">중간년도(${year2}년) 감소로 전년도 추징 발생. 3차 추징 기준(×2) - 전년도 기납부 추징 ≤ 0 → 추가 납부 없음.</div>
       </div>`;
   } else if (s.clawback > 0) {
     // y2_ok=true, 추징 발생 (Case A/B/C)
