@@ -195,7 +195,7 @@ function renderTab4() {
       <tr>
         <td class="fc-val fc-num">${nf(currentStats.total)}</td>
         <td class="fc-val fc-num">${nf(s1.prevTotal)}</td>
-        <td class="fc-val fc-num fc-bold">${nf(s1.totalIncrease)}</td>
+        <td class="fc-val fc-num fc-bold">${nf(round2(currentStats.total - (s1.prevTotal || 0)))}</td>
       </tr>
     </tbody>
   </table>
@@ -213,7 +213,7 @@ function renderTab4() {
       <tr>
         <td class="fc-val fc-num">${nf(currentStats.youth)}</td>
         <td class="fc-val fc-num">${nf(s1.prevYouth)}</td>
-        <td class="fc-val fc-num fc-bold">${nf(s1.youthIncrease)}</td>
+        <td class="fc-val fc-num fc-bold">${nf(round2(currentStats.youth - (s1.prevYouth || 0)))}</td>
       </tr>
     </tbody>
   </table>
@@ -231,7 +231,7 @@ function renderTab4() {
       <tr>
         <td class="fc-val fc-num">${nf(currentStats.nonYouth)}</td>
         <td class="fc-val fc-num">${nf(s1.prevNonYouth)}</td>
-        <td class="fc-val fc-num fc-bold">${nf(s1.nonYouthIncrease)}</td>
+        <td class="fc-val fc-num fc-bold">${nf(round2(currentStats.nonYouth - (s1.prevNonYouth || 0)))}</td>
       </tr>
     </tbody>
   </table>
