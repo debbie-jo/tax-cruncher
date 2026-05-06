@@ -138,13 +138,14 @@ async function uploadPrevYear(year, input) {
     const ws   = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
 
+    const format = detectExcelFormat(rows);
     const employees = [];
     for (let i = 1; i < rows.length; i++) {
       const row     = rows[i];
       const nameVal = String(row[1] || '').trim();
       if (!nameVal || nameVal.includes('합')) continue;
       // 직전년도 파일: year1=해당 연도 (각 연도 기준으로 청년 판단)
-      const emp = parseExcelRow(row, year, AppState.region);
+      const emp = parseExcelRow(row, year, AppState.region, format);
       if (emp) employees.push(emp);
     }
 
