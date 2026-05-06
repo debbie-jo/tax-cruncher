@@ -251,8 +251,8 @@ function renderTab4() {
     </tbody>
   </table>
 
-  ${stream2 ? _render2ndYearSection(stream2, year, s2YouthCredit, s2NonYouthCredit, companyType, isAllA) : ''}
-  ${stream3 ? _render3rdYearSection(stream3, year, s3YouthCredit, s3NonYouthCredit, companyType, isAllA) : ''}
+  ${stream2 ? _render2ndYearSection(stream2, year, s2YouthCredit, s2NonYouthCredit, companyType, !isNewRules) : ''}
+  ${stream3 ? _render3rdYearSection(stream3, year, s3YouthCredit, s3NonYouthCredit, companyType, !isNewRules) : ''}
 
   <!-- 합계 -->
   <table class="fc-table fc-total-table" style="margin-top:12px">
