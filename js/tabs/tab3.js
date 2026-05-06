@@ -211,9 +211,10 @@ function renderStream3ClawbackCard(stream, companyType, region, year, won, wonZ)
   } else if (s.clawbackCase === 'C') {
     baseNote = `청년 감소 ${s.clawbackYouthDec}명 × (${won(unitCredit.youth)} - ${won(unitCredit.nonYouth)})`;
   }
+  const mult = s.clawbackMultiplier || 2;
   const priorNote = s.priorClawback > 0
-    ? `<div style="font-size:12px;color:#888;margin-top:4px">※ 기준 추징 ${wonZ(s.clawbackBase)} × 2 - 전년도 기납부 추징 ${wonZ(s.priorClawback)}</div>`
-    : `<div style="font-size:12px;color:#888;margin-top:4px">※ 기준 추징 ${wonZ(s.clawbackBase)} × 공제횟수 2</div>`;
+    ? `<div style="font-size:12px;color:#888;margin-top:4px">※ 기준 추징 ${wonZ(s.clawbackBase)} × 공제횟수 ${mult} - 전년도 기납부 추징 ${wonZ(s.priorClawback)}</div>`
+    : `<div style="font-size:12px;color:#888;margin-top:4px">※ 기준 추징 ${wonZ(s.clawbackBase)} × 공제횟수 ${mult}</div>`;
 
   // 결과 박스 결정
   let resultHtml;

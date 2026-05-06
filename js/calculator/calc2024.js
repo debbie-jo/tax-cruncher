@@ -191,10 +191,13 @@ function calcCarryCredit_3rd(prevYears, currentStats, companyType, region, year1
   // 추징세액 계산 (2년이내: base × 공제횟수2 - 1년이내 기납부 추징) - year1TotalCredit을 상한으로 전달
   const baseCbd  = calcClawbackAmount(year1Total, year1Youth, currentStats.total, currentStats.youth, unitCredit, year1TotalCredit);
   const priorCbd = calcClawbackAmount(year1Total, year1Youth, year2Total, year2Youth, unitCredit, year1TotalCredit);
-  // y2_ok=false여도 year2에서 실제 추징이 발생했으므로 priorCbd 그대로 사용
+  // 공제횟수 = 실제 공제받은 횟수
+  // y2_ok=true: 1차+2차 모두 받음 → ×2
+  // y2_ok=false: 2차 배제, 1차만 받음 → ×1
+  const multiplier = y2_ok ? 2 : 1;
   const priorClawback = priorCbd.clawback;
   const clawback3 = baseCbd.clawback > 0
-    ? Math.max(0, round2(baseCbd.clawback * 2 - priorClawback))
+    ? Math.max(0, round2(baseCbd.clawback * multiplier - priorClawback))
     : 0;
 
   return {
@@ -212,7 +215,8 @@ function calcCarryCredit_3rd(prevYears, currentStats, companyType, region, year1
     clawbackYouthDec:  baseCbd.youthDec,
     clawbackTotalDec:  baseCbd.totalDec,
     clawbackNYouthDec: baseCbd.nYouthDec,
-    clawbackBase:      baseCbd.clawback,   // ×2 전 기준값 (표시용)
+    clawbackBase:      baseCbd.clawback,   // ×multiplier 전 기준값 (표시용)
+    clawbackMultiplier: multiplier,
     priorClawback,
     priorClawbackCase: priorCbd.caseType
   };
