@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>종합소득세 결산보고서 — 세무법인다승</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    /* ── 리셋 ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      background: #f0f2f5;
+      color: #212121;
+      font-size: 14px;
+    }
+
+    /* ── 헤더 ── */
+    .app-header {
+      background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+      color: white;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+    .app-header .back-btn {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 11px;
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 4px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .app-header .back-btn:hover { background: rgba(255,255,255,0.12); }
+    .app-header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    .app-header .hd-badge {
+      margin-left: auto;
+      font-size: 11px;
+      opacity: 0.7;
+      white-space: nowrap;
+    }
+
+    /* ── 2단 레이아웃 ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      min-height: calc(100vh - 56px);
+    }
+
+    /* ── 입력 패널 ── */
+    .inp-panel {
+      background: #fff;
+      border-right: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 56px);
+      position: sticky;
+      top: 56px;
+      overflow: hidden;
+    }
+    .inp-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+
+    /* ── 섹션 카드 ── */
+    .sec {
+      border: 1px solid #e3eaf6;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .sec-hd {
+      background: #e8f0fe;
+      padding: 9px 13px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1a237e;
+      letter-spacing: 0.1px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sec-bd { padding: 12px 13px; }
+
+    /* ── 폼 ── */
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 9px; }
+    .row1 { margin-bottom: 9px; }
+    .fg { display: flex; flex-direction: column; gap: 3px; }
+    .fg label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #5c6bc0;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .fg input, .fg select {
+      padding: 7px 9px;
+      border: 1px solid #dce3f0;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #212121;
+      transition: border-color 0.15s, box-shadow 0.15px;
+    }
+    .fg input:focus, .fg select:focus {
+      outline: none;
+      border-color: #1565c0;
+      box-shadow: 0 0 0 3px rgba(21,101,192,0.1);
+    }
+    .fg input[readonly] { background: #f5f7fb; color: #555; }
+    .fg input.from-pdf { background: #f0f4ff; border-color: #7986cb; }
+
+    /* ── PDF 업로드 ── */
+    .upload-zone {
+      border: 2px dashed #90caf9;
+      background: #e8f4fd;
+      border-radius: 8px;
+      padding: 18px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .upload-zone:hover { border-color: #1565c0; background: #dceefb; }
+    .upload-zone.ok { border-color: #43a047; background: #e8f5e9; border-style: solid; }
+    .upload-zone .uz-icon { font-size: 26px; margin-bottom: 6px; }
+    .upload-zone .uz-txt { font-size: 13px; color: #444; font-weight: 600; }
+    .upload-zone .uz-hint { font-size: 11px; color: #888; margin-top: 3px; }
+    .parse-badge {
+      display: inline-block;
+      font-size: 10px;
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    /* ── 액션 바 ── */
+    .action-bar {
+      padding: 12px 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 7px;
+      background: #fafbfd;
+    }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: #1565c0; color: #fff; }
+    .btn-secondary { background: #fff; color: #333; border: 1px solid #ccc; }
+    .btn-secondary:hover { background: #f0f0f0; }
+    .btn-print { background: #2e7d32; color: #fff; margin-left: auto; }
+    .btn-danger { background: #fff; color: #c62828; border: 1px solid #e57373; }
+
+    /* ── 보고서 패널 ── */
+    .rep-panel {
+      padding: 24px;
+      background: #f0f2f5;
+      overflow-y: auto;
+    }
+    .rep-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .rep-toolbar span { font-size: 13px; color: #666; font-weight: 600; }
+
+    /* ── 보고서 문서 ── */
+    .rep-doc {
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+      padding: 36px 40px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* 보고서 헤더 */
+    .rd-header {
+      text-align: center;
+      padding-bottom: 18px;
+      border-bottom: 2.5px solid #1565c0;
+      margin-bottom: 20px;
+    }
+    .rd-co { font-size: 11px; color: #888; margin-bottom: 5px; letter-spacing: 0.5px; }
+    .rd-title { font-size: 21px; font-weight: 800; color: #1a237e; margin-bottom: 3px; letter-spacing: -0.5px; }
+    .rd-sub { font-size: 12px; color: #666; }
+
+    /* 납세자 스트립 */
+    .rd-client {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      background: #f0f4ff;
+      border: 1px solid #c5cae9;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+    }
+    .rd-cf .cfl { font-size: 9px; color: #7986cb; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+    .rd-cf .cfv { font-size: 13px; font-weight: 700; color: #1a237e; margin-top: 2px; }
+
+    /* 보고서 섹션 */
+    .rd-sec { margin-bottom: 16px; }
+    .rd-sec-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #1565c0;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding-bottom: 5px;
+      border-bottom: 1.5px solid #bbdefb;
+      margin-bottom: 8px;
+    }
+
+    /* 보고서 테이블 */
+    .rd-tbl { width: 100%; border-collapse: collapse; }
+    .rd-tbl td {
+      padding: 6px 8px;
+      font-size: 12.5px;
+      border-bottom: 1px solid #f3f3f3;
+    }
+    .rd-tbl td:first-child { color: #555; }
+    .rd-tbl td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+    .rd-tbl .sub-note { font-size: 10px; color: #888; display: block; margin-top: 1px; }
+    .rd-tbl tr.deduct td:last-child { color: #c62828; }
+    .rd-tbl tr.subtotal td { background: #f5f7ff; font-weight: 700; border-top: 1px solid #c5cae9; border-bottom: 1px solid #c5cae9; }
+    .rd-tbl tr.payable td { background: #e8f5e9; font-weight: 800; color: #1b5e20; font-size: 13px; }
+    .rd-tbl tr.refund td { background: #fff3e0; font-weight: 800; color: #e65100; font-size: 13px; }
+
+    /* 합계 행 */
+    .rd-total {
+      background: #1565c0;
+      color: #fff;
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+    }
+    .rd-total.refund-total { background: #e65100; }
+    .rd-total .tl-label { font-size: 13px; font-weight: 600; }
+    .rd-total .tl-amount { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+    /* 메모 */
+    .rd-memo {
+      margin-top: 14px;
+      padding: 8px 12px;
+      background: #fff8e1;
+      border-left: 3px solid #ffd54f;
+      border-radius: 0 4px 4px 0;
+      font-size: 11.5px;
+      color: #6d4c41;
+    }
+
+    /* 푸터 */
+    .rd-footer {
+      margin-top: 18px;
+      padding-top: 10px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: #aaa;
+    }
+
+    /* 빈 상태 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #bbb;
+    }
+    .empty-state .es-icon { font-size: 52px; margin-bottom: 12px; opacity: 0.5; }
+    .empty-state p { font-size: 13px; line-height: 1.6; }
+
+    /* ── 모달 ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      width: 92%;
+      max-width: 560px;
+      max-height: 78vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    .modal-hd {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid #e0e0e0;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+    }
+    .modal-hd h3 { font-size: 15px; color: #1a237e; }
+    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #888; line-height: 1; }
+    .modal-body { padding: 16px 20px; }
+    .saved-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 13px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 7px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .saved-item:hover { background: #f0f4ff; }
+    .si-name { font-weight: 700; font-size: 14px; color: #1a237e; }
+    .si-meta { font-size: 11px; color: #888; margin-top: 2px; }
+    .si-actions { display: flex; gap: 6px; }
+
+    /* ── 토스트 ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #323232;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.25s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── 인쇄 ── */
+    @media print {
+      .app-header, .inp-panel, .rep-toolbar, .modal-overlay, .toast { display: none !important; }
+      body { background: white; }
+      .layout { display: block; }
+      .rep-panel { padding: 0; background: white; overflow: visible; }
+      .rep-doc {
+        box-shadow: none;
+        max-width: 100%;
+        padding: 16mm 18mm;
+        page-break-inside: avoid;
+      }
+      @page { size: A4 portrait; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<header class="app-header">
+  <a href="index.html" class="back-btn">← 메인</a>
+  <h1>📋 종합소득세 결산보고서</h1>
+  <span class="hd-badge">세무법인다승</span>
+</header>
+
+<div class="layout">
+
+  <!-- ── 왼쪽: 입력 패널 ── -->
+  <aside class="inp-panel">
+    <div class="inp-scroll">
+
+      <!-- PDF 업로드 -->
+      <div class="sec">
+        <div class="sec-hd">📄 신고서 PDF 업로드</div>
+        <div class="sec-bd">
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('pdfFileInput').click()">
+            <div class="uz-icon">📄</div>
+            <div class="uz-txt" id="uzTxt">종합소득세 신고서 PDF 선택</div>
+            <div class="uz-hint">클릭하여 파일 선택 · 파싱 후 자동 입력</div>
+          </div>
+          <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="handlePdf(this)">
+        </div>
+      </div>
+
+      <!-- 기본 정보 -->
+      <div class="sec">
+        <div class="sec-hd">👤 기본 정보</div>
+        <div class="sec-bd">
+          <div class="row2">
+            <div class="fg">
+              <label>납세자 성명</label>
+              <input type="text" id="f-name" placeholder="홍길동" oninput="render()">
+            </div>
+            <div class="fg">
+              <label>과세연도</label>
+              <select id="f-year" onchange="render()">
+                <option value="2024">2024년</option>
+                <option value="2023">2023년</option>
+                <option value="2022">2022년</option>
+                <option value="2021">2021년</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>사업자등록번호</label>
+              <input type="text" id="f-bizno" placeholder="000-00-00000" oninput="render()">
+            </div>
+            <div class="fg">
+              <label>업종코드</label>
+              <input type="text" id="f-upjong" placeholder="940903" maxlength="6" oninput="render()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 소득 현황 -->
+      <div class="sec">
+        <div class="sec-hd">💰 소득 현황</div>
+        <div class="sec-bd">
+          <div class="row1">
+            <div class="fg">
+              <label>총수입금액 (원)</label>
+              <input type="text" id="f-revenue" placeholder="0" oninput="fmtMe(this); render()">
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>단순경비율(일반) %</label>
+              <input type="number" id="f-simple-rate" placeholder="87.3" step="0.1" min="0" max="100"
+                     oninput="onRateChange(); render()">
+            </div>
+            <div class="fg">
+              <label>기준소득률 % <span style="font-size:9px;color:#aaa">(자동)</span></label>
+              <input type="number" id="f-std-rate" placeholder="—" readonly>
+            </div>
+          </div>
+          <div class="row1">
+            <div class="fg">
+              <label>소득금액 (원)</label>
+              <input type="text" id="f-income" placeholder="0" oninput="fmtMe(this); render()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 세액 계산 -->
+      <div class="sec">
+        <div class="sec-hd">📊 세액 계산</div>
+        <div class="sec-bd">
+          <div class="row1">
+            <div class="fg">
+              <label>종합소득 과세표준 (원)</label>
+              <input type="text" id="f-taxbase" placeholder="0" oninput="fmtMe(this); render()">
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>산출세액 (원)</label>
+              <input type="text" id="f-computed" placeholder="0" oninput="fmtMe(this); autoCalcDetermined(); render()">
+            </div>
+            <div class="fg">
+              <label>세액공제 (원)</label>
+              <input type="text" id="f-credit" placeholder="0" oninput="fmtMe(this); autoCalcDetermined(); render()">
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>감면세액 (원)</label>
+              <input type="text" id="f-reduction" placeholder="0" oninput="fmtMe(this); autoCalcDetermined(); render()">
+            </div>
+            <div class="fg">
+              <label>결정세액 (원) <span style="font-size:9px;color:#aaa">(자동)</span></label>
+              <input type="text" id="f-determined" placeholder="—" readonly>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>중간예납세액 (원)</label>
+              <input type="text" id="f-interim" placeholder="0" oninput="fmtMe(this); render()">
+            </div>
+            <div class="fg">
+              <label>원천징수세액 (원)</label>
+              <input type="text" id="f-withholding" placeholder="0" oninput="fmtMe(this); render()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 지방소득세·농특세 (수기) -->
+      <div class="sec">
+        <div class="sec-hd">🏛️ 지방소득세 · 농어촌특별세 <span style="font-size:10px;font-weight:400;opacity:0.7">(직접 입력)</span></div>
+        <div class="sec-bd">
+          <div class="row2">
+            <div class="fg">
+              <label>지방소득세 (원)</label>
+              <input type="text" id="f-local" placeholder="0" oninput="fmtMe(this); render()">
+            </div>
+            <div class="fg">
+              <label>농어촌특별세 (원)</label>
+              <input type="text" id="f-agri" placeholder="0" oninput="fmtMe(this); render()">
+            </div>
+          </div>
+          <div class="row1">
+            <div class="fg">
+              <label>비고</label>
+              <input type="text" id="f-notes" placeholder="특이사항 등" oninput="render()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.inp-scroll -->
+
+    <!-- 액션 바 -->
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="saveReport()">💾 저장</button>
+      <button class="btn btn-secondary" onclick="openModal()">📂 불러오기</button>
+      <button class="btn btn-danger btn-sm" onclick="clearAll()" style="padding:7px 10px">🗑 초기화</button>
+      <button class="btn btn-print" onclick="printReport()">🖨 인쇄 / PDF</button>
+    </div>
+  </aside>
+
+  <!-- ── 오른쪽: 보고서 미리보기 ── -->
+  <main class="rep-panel">
+    <div class="rep-toolbar">
+      <span>보고서 미리보기</span>
+    </div>
+    <div class="rep-doc" id="repDoc">
+      <div class="empty-state">
+        <div class="es-icon">📋</div>
+        <p>PDF 업로드 또는 항목 입력 시<br>보고서가 실시간으로 표시됩니다.</p>
+      </div>
+    </div>
+  </main>
+
+</div><!-- /.layout -->
+
+<!-- ── 불러오기 모달 ── -->
+<div class="modal-overlay" id="loadModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <h3>📂 저장된 보고서</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="savedList"></div>
+  </div>
+</div>
+
+<!-- ── 토스트 ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Supabase (선택) ────────────────────────────────────────────────────────
+// 사용 시 아래 두 값을 채워주세요.
+const SUPABASE_URL  = '';
+const SUPABASE_ANON = '';
+const SB_TABLE      = 'jongso_reports';
+let _sb = null;
+try {
+  if (SUPABASE_URL && SUPABASE_ANON && typeof supabase !== 'undefined') {
+    _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  }
+} catch(e) {}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── 유틸 ──────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const nf = n  => (n == null || isNaN(n)) ? '—' : n.toLocaleString('ko-KR') + '원';
+const pw = s  => parseInt(String(s || '').replace(/[^0-9-]/g, '')) || 0;
+
+function fmtMe(el) {
+  const v = pw(el.value);
+  el.value = v ? v.toLocaleString('ko-KR') : '';
+}
+
+function toast(msg, ms = 2200) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function onRateChange() {
+  const s = parseFloat($('f-simple-rate').value);
+  if (!isNaN(s) && s >= 0 && s <= 100) {
+    $('f-std-rate').value = (100 - s).toFixed(1);
+  } else {
+    $('f-std-rate').value = '';
+  }
+}
+
+function autoCalcDetermined() {
+  const c = pw($('f-computed').value);
+  const r = pw($('f-credit').value);
+  const d = pw($('f-reduction').value);
+  const det = Math.max(0, c - r - d);
+  $('f-determined').value = det ? det.toLocaleString('ko-KR') : '0';
+}
+
+// ── PDF 파싱 ──────────────────────────────────────────────────────────────
+async function handlePdf(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const zone = $('uploadZone');
+  const txt  = $('uzTxt');
+  txt.textContent = '⏳ ' + file.name + ' 분석 중...';
+
+  try {
+    const rawText = await extractPdfText(file);
+    const parsed  = parseTaxReturn(rawText);
+    applyParsed(parsed);
+    zone.classList.add('ok');
+    txt.innerHTML = '✅ ' + file.name + ' <span class="parse-badge">파싱 완료</span>';
+    toast('PDF 파싱 완료!');
+    autoCalcDetermined();
+    render();
+  } catch(e) {
+    txt.textContent = '⚠️ ' + file.name + ' — 직접 입력해주세요';
+    toast('PDF 파싱 오류: ' + e.message, 3500);
+    console.error(e);
+  }
+}
+
+async function extractPdfText(file) {
+  const buf  = await file.arrayBuffer();
+  const doc  = await pdfjsLib.getDocument({ data: buf }).promise;
+  let out = '';
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page    = await doc.getPage(p);
+    const content = await page.getTextContent();
+    let prev = null, line = '';
+    for (const item of content.items) {
+      const y = item.transform[5];
+      if (prev !== null && Math.abs(y - prev) > 3) { out += line + '\n'; line = ''; }
+      line += item.str;
+      prev = y;
+    }
+    if (line) out += line + '\n';
+    out += '<<<PAGE>>>\n';
+  }
+  return out;
+}
+
+function parseTaxReturn(text) {
+  const r = {};
+
+  // 납세자 성명
+  const nameM = text.match(/성[\s]*명\s+([가-힣]{2,5})(?:\s|$)/m);
+  if (nameM) r.name = nameM[1];
+
+  // 사업자등록번호
+  const bizM = text.match(/(\d{3}[ -]\d{2}[ -]\d{5})/);
+  if (bizM) r.bizNo = bizM[1].replace(/\s/g, '-');
+
+  // 업종코드
+  const upjM = text.match(/업[\s]*종[\s]*코[\s]*드\D{0,5}(\d{6})/);
+  if (upjM) r.upjong = upjM[1];
+
+  // ── 경비율 파싱 ──────────────────────────────────────────────────
+  // 단순경비율(일반)
+  const simM = text.match(/단[\s]*순[\s]*경[\s]*비[\s]*율\D{0,30}?([\d]{1,3}\.[\d])\s*%?/);
+  if (simM) {
+    r.simpleRate = parseFloat(simM[1]);
+    r.stdRate    = Math.round((100 - r.simpleRate) * 10) / 10;
+  }
+  // 기준소득률 직접 명시된 경우 우선
+  const stdM = text.match(/기[\s]*준[\s]*소[\s]*득[\s]*률\D{0,20}?([\d]{1,3}\.[\d])\s*%?/);
+  if (stdM) r.stdRate = parseFloat(stdM[1]);
+
+  // ── 금액 파싱 헬퍼 ───────────────────────────────────────────────
+  function amt(keys) {
+    for (const k of keys) {
+      const re = new RegExp(k + '[\\s\\S]{0,60}?([\\d,]{4,})', 'g');
+      const m  = re.exec(text);
+      if (m) return pw(m[1]);
+    }
+    return null;
+  }
+
+  r.revenue     = amt(['총수입금액', '수입금액합계']);
+  r.income      = amt(['소득금액합계', '소득금액']);
+  r.taxBase     = amt(['과세표준']);
+  r.computed    = amt(['산출세액']);
+  r.credit      = amt(['세액공제합계', '세액공제액', '세액공제']);
+  r.reduction   = amt(['감면세액합계', '감면세액']);
+  r.determined  = amt(['결정세액']);
+  r.interim     = amt(['중간예납세액', '중간예납']);
+  r.withholding = amt(['원천징수세액']);
+
+  // 농어촌특별세
+  const agriM = text.match(/농[\s]*어[\s]*촌[\s]*특[\s]*별[\s]*세\D{0,30}?([\d,]{3,})/);
+  if (agriM) r.agriTax = pw(agriM[1]);
+
+  return r;
+}
+
+function applyParsed(p) {
+  const sf = (id, v) => { if (v != null && v !== 0) $(id).value = v.toLocaleString('ko-KR'); };
+  const st = (id, v) => { if (v)               $(id).value = v; };
+
+  st('f-name',       p.name);
+  st('f-bizno',      p.bizNo);
+  st('f-upjong',     p.upjong);
+  sf('f-revenue',    p.revenue);
+  sf('f-income',     p.income);
+  sf('f-taxbase',    p.taxBase);
+  sf('f-computed',   p.computed);
+  sf('f-credit',     p.credit);
+  sf('f-reduction',  p.reduction);
+  sf('f-interim',    p.interim);
+  sf('f-withholding',p.withholding);
+  if (p.agriTax) sf('f-agri', p.agriTax);
+  if (p.simpleRate != null) {
+    $('f-simple-rate').value = p.simpleRate;
+    $('f-std-rate').value    = p.stdRate;
+  }
+
+  // parsed 스타일 표시
+  ['f-name','f-bizno','f-upjong','f-revenue','f-income','f-taxbase',
+   'f-computed','f-credit','f-reduction','f-interim','f-withholding'].forEach(id => {
+    const el = $(id);
+    if (el && el.value) el.classList.add('from-pdf');
+  });
+}
+
+// ── 보고서 렌더 ────────────────────────────────────────────────────────────
+function getData() {
+  const simpleRate  = parseFloat($('f-simple-rate').value);
+  const stdRate     = parseFloat($('f-std-rate').value);
+  const computed    = pw($('f-computed').value);
+  const credit      = pw($('f-credit').value);
+  const reduction   = pw($('f-reduction').value);
+  const determined  = Math.max(0, computed - credit - reduction);
+  const interim     = pw($('f-interim').value);
+  const withholding = pw($('f-withholding').value);
+  const payable     = determined - interim - withholding;
+  const local       = pw($('f-local').value);
+  const agri        = pw($('f-agri').value);
+  return {
+    name: $('f-name').value || '',
+    year: $('f-year').value || '2024',
+    bizNo: $('f-bizno').value || '',
+    upjong: $('f-upjong').value || '',
+    revenue: pw($('f-revenue').value),
+    income:  pw($('f-income').value),
+    taxBase: pw($('f-taxbase').value),
+    simpleRate, stdRate,
+    computed, credit, reduction, determined,
+    interim, withholding,
+    payable,
+    local, agri,
+    totalPay: payable + local + agri,
+    notes: $('f-notes').value || '',
+  };
+}
+
+function render() {
+  autoCalcDetermined();
+  const d = getData();
+  if (!d.name && !d.revenue && !d.computed) {
+    $('repDoc').innerHTML = `
+      <div class="empty-state">
+        <div class="es-icon">📋</div>
+        <p>PDF 업로드 또는 항목 입력 시<br>보고서가 실시간으로 표시됩니다.</p>
+      </div>`;
+    return;
+  }
+
+  // 기준소득률 표시 — 핵심: "100 - X%(단순경비율(일반)) = Y%"
+  let rateHtml = '—';
+  if (!isNaN(d.simpleRate) && d.simpleRate > 0 && !isNaN(d.stdRate)) {
+    rateHtml = `<span style="color:#555">100 &minus; <strong>${d.simpleRate}%</strong><span style="font-size:10px;color:#888">(단순경비율(일반))</span> = <strong style="color:#1a237e">${d.stdRate}%</strong></span>`;
+  } else if (!isNaN(d.stdRate) && d.stdRate > 0) {
+    rateHtml = `<strong>${d.stdRate}%</strong>`;
+  }
+
+  const payRow   = d.payable >= 0
+    ? `<tr class="payable"><td>납부할 세액 (종합소득세)</td><td>${nf(d.payable)}</td></tr>`
+    : `<tr class="refund"><td>환급세액 (종합소득세)</td><td>${nf(Math.abs(d.payable))}</td></tr>`;
+
+  const isRefund  = d.totalPay < 0;
+  const totalAbs  = Math.abs(d.totalPay);
+  const totalCls  = isRefund ? 'refund-total' : '';
+  const totalLbl  = isRefund ? '총 환급세액' : '총 납부세액';
+
+  const today = new Date().toLocaleDateString('ko-KR',
+    { year:'numeric', month:'long', day:'numeric' });
+
+  $('repDoc').innerHTML = `
+    <!-- 헤더 -->
+    <div class="rd-header">
+      <div class="rd-co">세무법인다승</div>
+      <div class="rd-title">종합소득세 결산보고서</div>
+      <div class="rd-sub">${d.year}년 귀속 종합소득세 확정신고 결과</div>
+    </div>
+
+    <!-- 납세자 정보 -->
+    <div class="rd-client">
+      <div class="rd-cf">
+        <div class="cfl">납세자</div>
+        <div class="cfv">${d.name || '—'}</div>
+      </div>
+      <div class="rd-cf">
+        <div class="cfl">사업자번호</div>
+        <div class="cfv" style="font-size:12px">${d.bizNo || '—'}</div>
+      </div>
+      <div class="rd-cf">
+        <div class="cfl">업종코드</div>
+        <div class="cfv">${d.upjong || '—'}</div>
+      </div>
+      <div class="rd-cf">
+        <div class="cfl">과세연도</div>
+        <div class="cfv">${d.year}년</div>
+      </div>
+    </div>
+
+    <!-- 소득 현황 -->
+    <div class="rd-sec">
+      <div class="rd-sec-title">💰 소득 현황</div>
+      <table class="rd-tbl">
+        <tr>
+          <td>총 수입금액</td>
+          <td>${nf(d.revenue)}</td>
+        </tr>
+        <tr>
+          <td>
+            기준소득률
+            <span class="sub-note">${rateHtml}</span>
+          </td>
+          <td>${!isNaN(d.stdRate) && d.stdRate > 0 ? d.stdRate + '%' : '—'}</td>
+        </tr>
+        <tr>
+          <td>소득금액</td>
+          <td>${nf(d.income)}</td>
+        </tr>
+        <tr>
+          <td>종합소득 과세표준</td>
+          <td>${nf(d.taxBase)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- 세액 계산 -->
+    <div class="rd-sec">
+      <div class="rd-sec-title">📊 종합소득세 계산</div>
+      <table class="rd-tbl">
+        <tr>
+          <td>산출세액</td>
+          <td>${nf(d.computed)}</td>
+        </tr>
+        ${d.credit   ? `<tr class="deduct"><td>&nbsp;&nbsp;(−) 세액공제</td><td>(${nf(d.credit)})</td></tr>`   : ''}
+        ${d.reduction? `<tr class="deduct"><td>&nbsp;&nbsp;(−) 감면세액</td><td>(${nf(d.reduction)})</td></tr>`: ''}
+        <tr class="subtotal">
+          <td>결정세액</td>
+          <td>${nf(d.determined)}</td>
+        </tr>
+        ${d.interim     ? `<tr class="deduct"><td>&nbsp;&nbsp;(−) 중간예납세액</td><td>(${nf(d.interim)})</td></tr>`    : ''}
+        ${d.withholding ? `<tr class="deduct"><td>&nbsp;&nbsp;(−) 원천징수세액</td><td>(${nf(d.withholding)})</td></tr>`: ''}
+        ${payRow}
+      </table>
+    </div>
+
+    <!-- 지방소득세 · 농특세 -->
+    <div class="rd-sec">
+      <div class="rd-sec-title">🏛️ 지방소득세 · 농어촌특별세</div>
+      <table class="rd-tbl">
+        <tr><td>지방소득세</td><td>${nf(d.local)}</td></tr>
+        <tr><td>농어촌특별세</td><td>${nf(d.agri)}</td></tr>
+      </table>
+    </div>
+
+    <!-- 합계 -->
+    <div class="rd-total ${totalCls}">
+      <span class="tl-label">${totalLbl}</span>
+      <span class="tl-amount">${nf(totalAbs)}</span>
+    </div>
+
+    ${d.notes ? `<div class="rd-memo">📝 ${d.notes}</div>` : ''}
+
+    <div class="rd-footer">
+      <span>본 보고서는 고객 안내용 참고자료입니다.</span>
+      <span>작성일: ${today}</span>
+    </div>
+  `;
+}
+
+// ── 저장 / 불러오기 (localStorage) ────────────────────────────────────────
+const LS_KEY = 'jongso_v2';
+
+function saveReport() {
+  const d = getData();
+  if (!d.name) { toast('납세자 성명을 입력하세요.'); return; }
+
+  const saved  = loadAll();
+  const exists = saved.findIndex(r => r.name === d.name && r.year === d.year);
+  const item   = { id: Date.now().toString(), name: d.name, bizNo: d.bizNo,
+                   year: d.year, at: new Date().toISOString(), data: d };
+  if (exists !== -1) saved[exists] = item;
+  else saved.unshift(item);
+  localStorage.setItem(LS_KEY, JSON.stringify(saved));
+
+  // Supabase upsert (선택)
+  if (_sb) {
+    _sb.from(SB_TABLE).upsert({
+      taxpayer_name: d.name, biz_no: d.bizNo,
+      tax_year: parseInt(d.year), data: d
+    }).then(({ error }) => { if (error) console.warn(error); });
+  }
+
+  toast(`✅ "${d.name} (${d.year}년)" 저장 완료`);
+}
+
+function loadAll() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function openModal() {
+  const saved = loadAll();
+  const list  = $('savedList');
+  if (!saved.length) {
+    list.innerHTML = '<p style="color:#aaa;text-align:center;padding:20px">저장된 보고서가 없습니다.</p>';
+  } else {
+    list.innerHTML = saved.map(r => `
+      <div class="saved-item" onclick="loadReport('${r.id}')">
+        <div>
+          <div class="si-name">${r.name} · ${r.year}년</div>
+          <div class="si-meta">${r.bizNo || ''}　${new Date(r.at).toLocaleDateString('ko-KR')}</div>
+        </div>
+        <div class="si-actions">
+          <button class="btn btn-danger" style="padding:4px 9px;font-size:11px"
+            onclick="event.stopPropagation(); delReport('${r.id}')">삭제</button>
+        </div>
+      </div>`).join('');
+  }
+  $('loadModal').classList.add('open');
+}
+
+function closeModal() { $('loadModal').classList.remove('open'); }
+
+function loadReport(id) {
+  const r = loadAll().find(x => x.id === id);
+  if (!r) return;
+  const d = r.data;
+  const sf = (fid, v) => { $(fid).value = v ? v.toLocaleString('ko-KR') : ''; };
+  const st = (fid, v) => { $(fid).value = v || ''; };
+
+  st('f-name',    d.name);  st('f-year',   d.year);
+  st('f-bizno',   d.bizNo); st('f-upjong', d.upjong);
+  sf('f-revenue', d.revenue); sf('f-income', d.income);
+  sf('f-taxbase', d.taxBase);
+  $('f-simple-rate').value = isNaN(d.simpleRate) ? '' : d.simpleRate;
+  $('f-std-rate').value    = isNaN(d.stdRate)    ? '' : d.stdRate;
+  sf('f-computed',   d.computed);   sf('f-credit',    d.credit);
+  sf('f-reduction',  d.reduction);  sf('f-interim',   d.interim);
+  sf('f-withholding',d.withholding);sf('f-local',     d.local);
+  sf('f-agri',       d.agri);       st('f-notes',     d.notes);
+  autoCalcDetermined();
+  render();
+  closeModal();
+  toast(`"${d.name}" 불러오기 완료`);
+}
+
+function delReport(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  localStorage.setItem(LS_KEY, JSON.stringify(loadAll().filter(r => r.id !== id)));
+  openModal();
+}
+
+function clearAll() {
+  if (!confirm('모든 입력을 초기화하시겠습니까?')) return;
+  ['f-name','f-bizno','f-upjong','f-revenue','f-income','f-taxbase',
+   'f-simple-rate','f-std-rate','f-computed','f-credit','f-reduction',
+   'f-determined','f-interim','f-withholding','f-local','f-agri','f-notes']
+    .forEach(id => { $(id).value = ''; $(id).classList && $(id).classList.remove('from-pdf'); });
+  $('uploadZone').classList.remove('ok');
+  $('uzTxt').textContent = '종합소득세 신고서 PDF 선택';
+  $('pdfFileInput').value = '';
+  $('f-year').value = '2024';
+  render();
+  toast('초기화 완료');
+}
+
+// ── 인쇄 ──────────────────────────────────────────────────────────────────
+function printReport() {
+  const d = getData();
+  if (!d.name && !d.revenue) { toast('데이터를 먼저 입력하세요.'); return; }
+  const prev = document.title;
+  document.title = `종합소득세결산보고서_${d.year}_${d.name}`;
+  window.print();
+  document.title = prev;
+}
+
+// ── 초기 렌더 ─────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
